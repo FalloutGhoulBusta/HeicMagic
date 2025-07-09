@@ -14,36 +14,11 @@ A Python GUI application designed to help Windows users extract individual frame
 - **Detailed logging**: View conversion progress and error messages
 - **Cross-platform**: Works on Windows, macOS, and Linux
 - **Offline operation**: No internet connection required
-
 ## Screenshots
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            HEIC Converter                                   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ Input Path:  [/path/to/heic/files          ] [Browse Files] [Browse Folder] │
-│ Output Path: [/path/to/output              ] [Browse]                       │
-│                                                                             │
-│ ┌─ Conversion Settings ─────────────────────────────────────────────────────┐ │
-│ │ Output Format: ◉ JPEG  ○ PNG                                             │ │
-│ │ JPEG Quality:  [████████████████████████████████████████████████] 92%    │ │
-│ │ ☑ Create ZIP file                                                         │ │
-│ └───────────────────────────────────────────────────────────────────────────┘ │
-│                                                                             │
-│        [Scan for HEIC Files]  [Convert Images]  [Stop]                     │
-│                                                                             │
-│ Progress: [████████████████████████████████████████████████████████████████] │
-│ Status: Ready                                                               │
-│                                                                             │
-│ ┌─ Log ─────────────────────────────────────────────────────────────────────┐ │
-│ │ [12:34:56] Found 15 HEIC files                                           │ │
-│ │ [12:34:57] Converting IMG_001.heic...                                    │ │
-│ │ [12:34:58] Converted: IMG_001.heic -> IMG_001.jpg                        │ │
-│ │ [12:34:59] Creating ZIP file...                                          │ │
-│ │ [12:35:00] Conversion completed successfully!                            │ │
-│ └───────────────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+![HEIC Dynamic Wallpaper Extractor](./screenshots/image1.png)
+
+<p align="center">HEIC Dynamic Wallpaper Extractor</p>
 
 ## Installation
 
