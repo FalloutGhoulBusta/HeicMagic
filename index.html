@@ -12,8 +12,12 @@
     <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
 
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   </head>
   <body>
+    <!-- Add this right after the opening <body> tag -->
+    <input type="file" id="fileInput" accept=".heic,.HEIC,.heif,.HEIF" multiple style="display: none;" />
     <div
       class="relative flex size-full min-h-screen flex-col bg-[#fcfbf8] group/design-root overflow-x-hidden"
       style='--radio-dot-svg: url(&apos;data:image/svg+xml,%3csvg viewBox=%270 0 16 16%27 fill=%27rgb(244,198,83)%27 xmlns=%27http://www.w3.org/2000/svg%27%3e%3ccircle cx=%278%27 cy=%278%27 r=%273%27/%3e%3c/svg%3e&apos;); font-family: "Plus Jakarta Sans", "Noto Sans", sans-serif;'
@@ -218,5 +222,189 @@
         </div>
       </div>
     </div>
+    <script>
+      const fileInput = document.getElementById('fileInput');
+      const chooseFileButtons = document.querySelectorAll('button:has(span:contains("Choose Files"))');
+      const convertButton = document.querySelectorAll('button:has(span:contains("Convert"))')[0];
+      const stopButton = document.querySelectorAll('button:has(span:contains("Stop"))')[0];
+      const progressBar = document.querySelector('.bg-[#f4c653]');
+      const logContainer = document.querySelector('.layout-content-container');
+      const qualitySlider = document.querySelector('.h-1.flex-1');
+      const qualityInput = document.querySelector('input[class*="form-input"]');
+      const zipCheckbox = document.querySelector('input[type="checkbox"]');
+      const formatRadios = document.querySelectorAll('input[type="radio"]');
+
+      let conversionRunning = false;
+      let selectedFiles = [];
+
+      // File selection handling
+      chooseFileButtons.forEach(button => {
+          button.addEventListener('click', () => fileInput.click());
+      });
+
+      // Drag and drop handling
+      document.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+      });
+
+      document.addEventListener('drop', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const files = [...e.dataTransfer.files].filter(file =>
+              file.name.toLowerCase().endsWith('.heic') ||
+              file.name.toLowerCase().endsWith('.heif')
+          );
+          if (files.length) handleFiles(files);
+      });
+
+      fileInput.addEventListener('change', (e) => {
+          handleFiles(Array.from(e.target.files));
+      });
+
+      function handleFiles(files) {
+          selectedFiles = files;
+          updateFileChips();
+      }
+
+      function updateFileChips() {
+          const chipContainer = document.querySelector('.flex.gap-3.p-3.flex-wrap');
+          chipContainer.innerHTML = '';
+
+          selectedFiles.forEach(file => {
+              const chip = document.createElement('div');
+              chip.className = 'flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#f3f0e7] pl-4 pr-4';
+              chip.innerHTML = `<p class="text-[#1c170d] text-sm font-medium leading-normal">${file.name}</p>`;
+              chipContainer.appendChild(chip);
+          });
+      }
+
+      function addLogEntry(status, message) {
+          const timestamp = new Date().toISOString().replace('T', ' ').substr(0, 19);
+          const logEntry = document.createElement('div');
+          logEntry.className = 'flex gap-4 bg-[#fcfbf8] px-4 py-3';
+          logEntry.innerHTML = `
+              <div class="flex flex-1 flex-col justify-center">
+                  <p class="text-[#1c170d] text-base font-medium leading-normal">${status}</p>
+                  <p class="text-[#9b844b] text-sm font-normal leading-normal">${timestamp}</p>
+                  <p class="text-[#9b844b] text-sm font-normal leading-normal">${message}</p>
+              </div>
+          `;
+
+          const logArea = document.querySelector('.layout-content-container');
+          logArea.appendChild(logEntry);
+          logEntry.scrollIntoView({ behavior: 'smooth' });
+      }
+
+      async function convertFiles() {
+          if (conversionRunning || selectedFiles.length === 0) return;
+
+          conversionRunning = true;
+          convertButton.disabled = true;
+          stopButton.disabled = false;
+          progressBar.style.width = '0%';
+
+          const format = Array.from(formatRadios).find(radio => radio.checked)?.parentElement.textContent.trim().toLowerCase() || 'jpeg';
+          const quality = parseInt(qualityInput.value || '92') / 100;
+          const convertedFiles = [];
+
+          addLogEntry('Info', `Starting conversion of ${selectedFiles.length} files...`);
+
+          try {
+              for (let i = 0; i < selectedFiles.length; i++) {
+                  if (!conversionRunning) break;
+
+                  const file = selectedFiles[i];
+                  addLogEntry('Info', `Converting: ${file.name}`);
+
+                  try {
+                      const blob = await heic2any({
+                          blob: file,
+                          toType: format,
+                          quality: format === 'jpeg' ? quality : undefined
+                      });
+
+                      const baseName = file.name.substring(0, file.name.lastIndexOf('.'));
+                      const newFileName = `${baseName}.${format}`;
+                      const convertedFile = new File([blob], newFileName, { type: `image/${format}` });
+                      convertedFiles.push(convertedFile);
+
+                      addLogEntry('Success', `Converted: ${file.name} -> ${newFileName}`);
+                  } catch (error) {
+                      addLogEntry('Error', `Error converting ${file.name}: ${error.message}`);
+                  }
+
+                  progressBar.style.width = `${((i + 1) / selectedFiles.length) * 100}%`;
+              }
+
+              if (zipCheckbox.checked && convertedFiles.length > 0 && conversionRunning) {
+                  addLogEntry('Info', 'Creating ZIP file...');
+                  const zip = new JSZip();
+
+                  convertedFiles.forEach(file => {
+                      zip.file(file.name, file);
+                  });
+
+                  const zipBlob = await zip.generateAsync({ type: 'blob' });
+                  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                  const zipFileName = `converted_images_${timestamp}.zip`;
+
+                  const downloadLink = document.createElement('a');
+                  downloadLink.href = URL.createObjectURL(zipBlob);
+                  downloadLink.download = zipFileName;
+                  downloadLink.click();
+                  URL.revokeObjectURL(downloadLink.href);
+
+                  addLogEntry('Success', `ZIP file created: ${zipFileName}`);
+              } else if (convertedFiles.length > 0 && conversionRunning) {
+                  convertedFiles.forEach(file => {
+                      const downloadLink = document.createElement('a');
+                      downloadLink.href = URL.createObjectURL(file);
+                      downloadLink.download = file.name;
+                      downloadLink.click();
+                      URL.revokeObjectURL(downloadLink.href);
+                  });
+              }
+
+              if (conversionRunning) {
+                  addLogEntry('Success', `Conversion completed! ${convertedFiles.length} files converted.`);
+              }
+          } catch (error) {
+              addLogEntry('Error', `Error during conversion: ${error.message}`);
+          } finally {
+              conversionRunning = false;
+              convertButton.disabled = false;
+              stopButton.disabled = true;
+          }
+      }
+
+      function stopConversion() {
+          conversionRunning = false;
+          stopButton.disabled = true;
+          convertButton.disabled = false;
+          addLogEntry('Info', 'Conversion stopped by user');
+      }
+
+      // Event Listeners
+      convertButton.addEventListener('click', convertFiles);
+      stopButton.addEventListener('click', stopConversion);
+
+      // Quality slider handling
+      qualitySlider.addEventListener('click', (e) => {
+          const rect = qualitySlider.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const percentage = Math.round((x / rect.width) * 100);
+          const clampedValue = Math.max(1, Math.min(100, percentage));
+          qualityInput.value = clampedValue;
+          qualitySlider.querySelector('.w-\\[32\\%\\]').style.width = `${clampedValue}%`;
+          qualitySlider.querySelector('.absolute').style.left = `calc(${clampedValue}% - 8px)`;
+      });
+
+      qualityInput.addEventListener('input', (e) => {
+          const value = Math.max(1, Math.min(100, parseInt(e.target.value) || 92));
+          qualitySlider.querySelector('.w-\\[32\\%\\]').style.width = `${value}%`;
+          qualitySlider.querySelector('.absolute').style.left = `calc(${value}% - 8px)`;
+      });
+    </script>
   </body>
 </html>
