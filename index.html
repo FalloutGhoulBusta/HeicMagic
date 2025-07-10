@@ -396,13 +396,15 @@
           const percentage = Math.round((x / rect.width) * 100);
           const clampedValue = Math.max(1, Math.min(100, percentage));
           qualityInput.value = clampedValue;
-          qualitySlider.querySelector('.w-\\[32\\%\\]').style.width = `${clampedValue}%`;
+          // Use a more robust selector for the width element
+          qualitySlider.querySelector('div[class*="w-"][class*="rounded-sm"][class*="bg-[#f4c653]"]').style.width = `${clampedValue}%`;
           qualitySlider.querySelector('.absolute').style.left = `calc(${clampedValue}% - 8px)`;
       });
 
       qualityInput.addEventListener('input', (e) => {
           const value = Math.max(1, Math.min(100, parseInt(e.target.value) || 92));
-          qualitySlider.querySelector('.w-\\[32\\%\\]').style.width = `${value}%`;
+           // Use a more robust selector for the width element
+          qualitySlider.querySelector('div[class*="w-"][class*="rounded-sm"][class*="bg-[#f4c653]"]').style.width = `${value}%`;
           qualitySlider.querySelector('.absolute').style.left = `calc(${value}% - 8px)`;
       });
     </script>
